@@ -170,7 +170,24 @@ export function Feedback(props: any) {
                     {(msgData.message[0].component.payload.view == 'emojis' || msgData.message[0].component.payload.view == 'CSAT') && <div className="csat-feedback">
                         <div className="emoji_container">
                             {msgData.message[0].component.payload.smileyArrays.map((emojiItem: any, ind: any) => (<div className="emoji-feedback">
-                                <input type="radio" id={`rating-${emojiItem.smileyId}`} className={`rating-${msgData.messageId}-${ind}`} name={`csat_feedback-${msgData.messageId}`} onClick={event => handleEmoji(event, emojiItem)} />
+                                <input
+                                    type="radio"
+                                    id={`rating-${emojiItem.smileyId}`}
+                                    className={`rating-${msgData.messageId}-${ind}`}
+                                    name={`csat_feedback-${msgData.messageId}`}
+                                    onKeyDown={(e: any) => {
+                                        if (e.key === 'Enter') {
+                                            handleEmoji(e, emojiItem);
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    onClick={(e: any) => {
+                                        if (e.detail !== 0) {
+                                            handleEmoji(e, emojiItem);
+                                        }
+                                    }}
+                                    aria-label={emojiItem.reviewText}
+                                />
                                 <div className="emoji-details-label" for={`rating-${emojiItem.smileyId}`} onClick={event => handleEmoji(event, emojiItem, msgData.messageId, ind)}>
                                     <p>{emojiItem.reviewText}</p>
                                 </div>
