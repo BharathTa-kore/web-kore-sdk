@@ -342,6 +342,7 @@ class KoreMultiFileUploaderPlugin {
       },
       success(response: { fileToken: any; }) {
         _recState.fileToken = response.fileToken;
+        me.fileToken = response.fileToken;
         me.prepareUploadConfig(_recState, _file);
       },
       error(msg: { responseJSON: { errors: string | any[]; }; }) {
@@ -383,8 +384,8 @@ class KoreMultiFileUploaderPlugin {
     let ele: any;
     var uploadConfig = me.getfileuploadConf(selectedFile);
     uploadConfig.chunkSize = me.appConsts.CHUNK_SIZE;
-    uploadConfig.chunkUpload = selectedFile.size > me.appConsts.CHUNK_SIZE;
-    uploadConfig.file = selectedFile;
+    uploadConfig.chunkUpload = selectedFile.componentSize > me.appConsts.CHUNK_SIZE;
+    uploadConfig.file = _file;
     if (uploadConfig.chunkUpload) {
       me.createElement(selectedFile);
       ele = me.hostInstance.chatEle.querySelector('#uid' + selectedFile.uniqueId);
@@ -569,7 +570,7 @@ class KoreMultiFileUploaderPlugin {
 
   multiFileUploader(options: any, element: any) {
     let me: any = this;
-    this.options = { options };
+    this.options = options;
     this.$element = element;
     me.uploadingInProgress = true;
     if (element) {
@@ -585,9 +586,9 @@ class KoreMultiFileUploaderPlugin {
     }
 
     if (!this.options.chunkUpload) {
-      me.startUpload(this.options, element);
+      me.startUpload(this, element);
     } else {
-      me.startChunksUpload(this);
+      me.startChunksUpload(this, element);
     }
   }
 
@@ -626,7 +627,7 @@ class KoreMultiFileUploaderPlugin {
     this._conc.send(me.MultipartDatatoString());
   }
 
-  startChunksUpload(_this: { options: { tokenUrl: any; headers: { [x: string]: any; }; }; }) {
+  startChunksUpload(_this: { options: { tokenUrl: any; headers: { [x: string]: any; }; }; }, element: any) {
     let me = this;
     const _scope: any = _this;
     const _conc = me.getConnection(_this);
@@ -639,7 +640,7 @@ class KoreMultiFileUploaderPlugin {
         _scope.totalChunks = Math.floor(_scope.options.file.size / _scope.options.chunkSize) + 1;
         _scope.currChunk = 0;
         _scope.options.chunkUrl = _scope.options.chunkUrl.replace(':token', _scope.messageToken);
-        if (_scope.$element.parent().length) {
+        if (me.isElementInDOM(_scope.$element)) {
           me.initUploadChunk(_scope);
         }
       } else {
@@ -688,6 +689,10 @@ class KoreMultiFileUploaderPlugin {
     //     return this.xhr.onReadyStateChange && this.xhr.onReadyStateChange.call(this.xhr);
     // };
     return this.xhr;
+  }
+
+  isElementInDOM(el: any) {
+    return !!(el && (el.isConnected || (typeof document !== 'undefined' && document.body && document.body.contains(el))));
   }
 
   // kfrm.net.HttpRequest = me.HttpRequest;
@@ -743,12 +748,12 @@ class KoreMultiFileUploaderPlugin {
     const reader = new FileReader();
     const blob = file.slice(start, stop);
     reader.onloadend = function (evt: any) {
-      if (evt.target.readyState === FileReader.DONE && _scope.$element.parent().length) { // DONE == 2
+      if (evt.target.readyState === FileReader.DONE && me.isElementInDOM(_scope.$element)) { // DONE == 2
         let dataObj = evt.target.result;
         dataObj = dataObj.replace(/^.*;base64,/, '');
         dataObj = dataObj.replace('data:application/octet-stream;base64,', '');
         _scope.chunk = dataObj;
-        if (_scope.currChunk < _scope.totalChunks && _scope.$element.parent().length) {
+        if (_scope.currChunk < _scope.totalChunks && me.isElementInDOM(_scope.$element)) {
           me.uploadChunk(_scope);
         }
       } else {
@@ -766,7 +771,7 @@ class KoreMultiFileUploaderPlugin {
     _conc.addEventListener('load', (evt: { target: { status: number; }; }) => {
       if (evt.target.status === 200) {
         _scope.currChunk++;
-        if (!_scope.$element.parent().length) {
+        if (!me.isElementInDOM(_scope.$element)) {
 
         } else if (_scope.currChunk === _scope.totalChunks) {
           me.commitFile(_scope);
